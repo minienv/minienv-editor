@@ -11,45 +11,36 @@ import (
 )
 
 type FileMap struct {
-	FileName string
-	IsDir bool
-	Children []*FileMap
+	FileName string `json:"fileName"`
+	FilePath string `json:"filePath"`
+	IsDir bool `json:"isDir"`
+	Children []*FileMap `json:"children"`
 }
 
-func getChildren(filePath string, fileMap *FileMap) {
-	files, err := ioutil.ReadDir(filePath)
+func getChildren(fullFilePath string, relativeFilePath string, fileMap *FileMap) {
+	files, err := ioutil.ReadDir(fullFilePath)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	for i := 0; i < len(files); i++ {
-		childFileMap := &FileMap{FileName: files[i].Name(), IsDir: files[i].IsDir(), Children:nil}
+		childFullFilePath := fmt.Sprintf("%s%s%s",fullFilePath, string(os.PathSeparator), files[i].Name())
+		childRelativeFilePath := fmt.Sprintf("%s%s%s",relativeFilePath, string(os.PathSeparator), files[i].Name())
+		childFileMap := &FileMap{FileName: files[i].Name(), FilePath: childRelativeFilePath, IsDir: files[i].IsDir(), Children:nil}
 		fileMap.Children = append(fileMap.Children, childFileMap)
 		if files[i].IsDir() {
-			getChildren(filePath + string(os.PathSeparator) + files[i].Name(), childFileMap)
+			getChildren(childFullFilePath, childRelativeFilePath, childFileMap)
 		}
 	}
 }
 
-//func printFileMap(fileMap *FileMap, depth int) {
-//	for i := 0; i<len(fileMap.Children); i++ {
-//		for j := 0; j < depth; j++ {
-//			fmt.Print(" ")
-//		}
-//		fmt.Println(fileMap.Children[i].FileName)
-//		if fileMap.Children[i].IsDir {
-//			printFileMap(fileMap.Children[i], depth+1)
-//		}
-//	}
-//}
-
 func fileHandler(w http.ResponseWriter, r *http.Request) {
-	baseDir := os.Getenv("DC_DIR")
+	baseDir := os.Getenv("EXUP_DIR")
 	filePath := r.URL.Query()["fp"][0]
-	if len(filePath) > 0 && filePath[0:1] == "/" {
+	if len(filePath) > 0 && filePath[0:1] == string(os.PathSeparator) {
 		filePath = filePath[1:]
 	}
-	filePath = baseDir + "/" + filePath
+	filePath = fmt.Sprintf("%s%s%s", baseDir, string(os.PathSeparator), filePath)
 	b, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
@@ -61,10 +52,10 @@ func fileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileListHandler(w http.ResponseWriter, r *http.Request) {
-	baseDir := os.Getenv("DC_DIR")
-	fileMap := &FileMap{FileName: baseDir, IsDir: true, Children: nil}
-	getChildren(baseDir, fileMap)
-	//printFileMap(fileMap, 0)
+	baseDir := os.Getenv("EXUP_DIR")
+	relativeDir := string(os.PathSeparator)
+	fileMap := &FileMap{FileName: relativeDir, FilePath: relativeDir, IsDir: true, Children: nil}
+	getChildren(baseDir, relativeDir, fileMap)
 	_, err := json.Marshal(fileMap)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
