@@ -66,6 +66,15 @@ func fileListHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(fileMap)
 }
 
+func addCorsHeaderThenServe(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Set some header.
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		// Serve with the actual handler.
+		h.ServeHTTP(w, r)
+	}
+}
+
 func main() {
 	if len(os.Args) != 2 {
 		log.Fatalf("Usage: %s <port>", os.Args[0])
@@ -76,7 +85,7 @@ func main() {
 	staticFileHandler := http.FileServer(http.Dir("public"))
 	http.HandleFunc("/api/files", fileListHandler)
 	http.HandleFunc("/api/file", fileHandler)
-	http.Handle("/", staticFileHandler)
+	http.Handle("/", addCorsHeaderThenServe(staticFileHandler))
 	err := http.ListenAndServe(":"+os.Args[1], nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
