@@ -27,4 +27,4 @@ var getLanguageForExtension = function(ext) {
         language = "yaml";
     }
     return language;
-}
+};
