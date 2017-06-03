@@ -33,6 +33,10 @@ html, body {
 	font-weight: bold;
 }
 
+#button-container {
+	width: 100%;
+}
+
 #editor {
 	width: 100%;
 }

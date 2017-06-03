@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 )
@@ -35,6 +36,55 @@ func getChildren(fullFilePath string, relativeFilePath string, fileMap *FileMap)
 }
 
 func fileHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "PUT":
+		fileHandlerPut(w, r)
+	default:
+		fileHandlerGet(w, r)
+	}
+}
+
+func fileHandlerPut(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	values, err := url.ParseQuery(string(body))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	baseDir := os.Getenv("EXUP_DIR")
+	filePath := values.Get("fp")
+	if len(filePath) > 0 && filePath[0:1] == string(os.PathSeparator) {
+		filePath = filePath[1:]
+	}
+	filePath = fmt.Sprintf("%s%s%s", baseDir, string(os.PathSeparator), filePath)
+	fileContents := values.Get("contents")
+	// write file
+	err = ioutil.WriteFile(filePath, []byte(fileContents), 0644)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// read file and return
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+}
+
+func fileHandlerGet(w http.ResponseWriter, r *http.Request) {
 	baseDir := os.Getenv("EXUP_DIR")
 	filePath := r.URL.Query()["fp"][0]
 	if len(filePath) > 0 && filePath[0:1] == string(os.PathSeparator) {

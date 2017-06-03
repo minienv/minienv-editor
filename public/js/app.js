@@ -2,6 +2,7 @@ var app = {
 
     filesTimerMillis: 5000,
     files: undefined,
+    filePath: undefined,
 
     toggleTree: function(e) {
         var target = e.target || e.srcElement;
@@ -46,10 +47,27 @@ var app = {
         return li;
     },
 
+    saveFile: function() {
+        var request = new XMLHttpRequest();
+        request.onload = function () {
+            if (this.status >= 200 && this.status < 400) {
+                console.log("SAVED!");
+            }
+            else {
+                console.log('Error loading file.');
+            }
+        };
+        request.open('PUT', '/api/file', true);
+        var data = 'fp=' + encodeURIComponent(app.filePath);
+        data += '&contents=' + encodeURIComponent(editor.getValue());
+        request.send(data);
+    },
+
     loadFile: function(filePath) {
         var request = new XMLHttpRequest();
         request.onload = function () {
             if (this.status >= 200 && this.status < 400) {
+                app.filePath = filePath;
                 ext = filePath.substring(filePath.lastIndexOf('.')+1);
                 editor.setValue(this.responseText);
                 monaco.editor.setModelLanguage(editor.getModel(), getLanguageForExtension(ext));
@@ -95,6 +113,9 @@ var app = {
     },
 
     init: function () {
+        document.getElementById('save-btn').addEventListener('click', function() {
+            app.saveFile();
+        });
         setTimeout(app.loadFiles(), 1);
     }
 
