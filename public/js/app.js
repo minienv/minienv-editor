@@ -51,7 +51,7 @@ var app = {
         var request = new XMLHttpRequest();
         request.onload = function () {
             if (this.status >= 200 && this.status < 400) {
-                console.log("SAVED!");
+                console.log("Saved.");
             }
             else {
                 console.log('Error loading file.');

@@ -14,15 +14,19 @@ html, body {
 	width: 100%;
 	overflow-y: auto;
 	overflow-x: auto;
+	font-size: 11pt;
+	float: left;
 }
 
 .tree-expand {
 	display: block;
+	padding: 0px 0px 0px 10px;
 }
 
 .tree-collapse {
 	display: none;
 	height: 0px;
+	padding: 0px 0px 0px 10px;
 }
 
 .tree-dir {
@@ -33,12 +37,15 @@ html, body {
 	font-weight: bold;
 }
 
-#button-container {
+#editor-container {
 	width: 100%;
+	height: 100%;
+	float: left;
 }
 
 #editor {
 	width: 100%;
+	height: 100%;
 }
 
 .gutter {
@@ -61,6 +68,11 @@ html, body {
 	-webkit-box-sizing: border-box;
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;
+}
+
+.split, .gutter.gutter-horizontal {
+	float: left;
+	height: 100%;
 }
 
 .gutter.gutter-vertical {
