@@ -23,6 +23,9 @@ var getLanguageForExtension = function(ext) {
     else if (ext == "md") {
         language = "markdown";
     }
+    else if (ext == "swift") {
+        language = "swift";
+    }
     else if (ext == "yml" || ext == "yaml") {
         language = "yaml";
     }
