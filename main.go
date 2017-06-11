@@ -60,7 +60,7 @@ func fileHandlerPut(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	baseDir := os.Getenv("EXUP_DIR")
+	baseDir := getBaseDir(r, values)
 	filePath := values.Get("fp")
 	if len(filePath) > 0 && filePath[0:1] == string(os.PathSeparator) {
 		filePath = filePath[1:]
@@ -85,7 +85,7 @@ func fileHandlerPut(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileHandlerGet(w http.ResponseWriter, r *http.Request) {
-	baseDir := os.Getenv("EXUP_DIR")
+	baseDir := getBaseDir(r, r.URL.Query())
 	filePath := r.URL.Query()["fp"][0]
 	if len(filePath) > 0 && filePath[0:1] == string(os.PathSeparator) {
 		filePath = filePath[1:]
@@ -102,7 +102,8 @@ func fileHandlerGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileListHandler(w http.ResponseWriter, r *http.Request) {
-	baseDir := os.Getenv("EXUP_DIR")
+	baseDir := getBaseDir(r, r.URL.Query())
+	log.Printf("BASE DIR IS %s", baseDir)
 	relativeDir := string(os.PathSeparator)
 	fileMap := &FileMap{FileName: relativeDir, FilePath: relativeDir, IsDir: true, Children: nil}
 	getChildren(baseDir, relativeDir, fileMap)
@@ -116,10 +117,30 @@ func fileListHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(fileMap)
 }
 
-func addCorsHeaderThenServe(h http.Handler) http.HandlerFunc {
+func getBaseDir(r *http.Request, values url.Values) string {
+	baseDir := os.Getenv("EXUP_DIR")
+	srcDir := ""
+	srcDirs := values["src"]
+	if len(srcDirs) > 0 {
+		srcDir = string(srcDirs[0])
+	}
+	if len(srcDir) > 1 {
+		if srcDir[0:1] == string(os.PathSeparator) {
+			baseDir += srcDir
+		} else {
+			baseDir += string(os.PathSeparator)
+			baseDir += srcDir
+		}
+	}
+	return baseDir
+}
+
+func addCorsAndCacheHeadersThenServe(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Set some header.
 		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Cache-Control", "no-store, must-revalidate")
+		w.Header().Add("Expires", "0")
 		// Serve with the actual handler.
 		h.ServeHTTP(w, r)
 	}
@@ -135,7 +156,7 @@ func main() {
 	staticFileHandler := http.FileServer(http.Dir("public"))
 	http.HandleFunc("/api/files", fileListHandler)
 	http.HandleFunc("/api/file", fileHandler)
-	http.Handle("/", addCorsHeaderThenServe(staticFileHandler))
+	http.Handle("/", addCorsAndCacheHeadersThenServe(staticFileHandler))
 	err := http.ListenAndServe(":"+os.Args[1], nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

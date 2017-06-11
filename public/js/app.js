@@ -59,7 +59,11 @@ var app = {
         };
         request.open('PUT', '/api/file', true);
         var data = 'fp=' + encodeURIComponent(app.filePath);
-        data += '&contents=' + encodeURIComponent(editor.getValue());
+		var srcDir = app.getParameterByName('src');
+		if (srcDir && srcDir.length > 0) {
+			data += "&src=" + encodeURIComponent(srcDir);
+		}
+		data += '&contents=' + encodeURIComponent(editor.getValue());
         request.send(data);
     },
 
@@ -76,7 +80,16 @@ var app = {
                 console.log('Error loading file.');
             }
         };
-        request.open('GET', '/api/file?fp=' + encodeURIComponent(filePath), true);
+        var path = '/api/file';
+		var srcDir = app.getParameterByName('src');
+		if (srcDir && srcDir.length > 0) {
+			path += "?src=" + encodeURIComponent(srcDir) + '&';
+		}
+		else {
+		    path += '?';
+        }
+        path += 'fp=' + encodeURIComponent(filePath);
+        request.open('GET', path, true);
         request.send();
     },
 
@@ -108,9 +121,30 @@ var app = {
                 setTimeout(app.loadFiles(), app.filesTimerMillis);
             }
         };
-        request.open('GET', '/api/files', true);
+        var path = '/api/files';
+        var srcDir = app.getParameterByName('src');
+        if (srcDir && srcDir.length > 0) {
+			path += "?src=" + encodeURIComponent(srcDir);
+        }
+        request.open('GET', path, true);
         request.send();
     },
+
+	getParameterByName: function(name, url) {
+		if (!url) {
+		    url = window.location.href;
+		}
+		name = name.replace(/[\[\]]/g, "\\$&");
+		var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+        var results = regex.exec(url);
+		if (!results) {
+		    return null;
+		}
+		if (!results[2]) {
+		    return '';
+		}
+		return decodeURIComponent(results[2].replace(/\+/g, " "));
+	},
 
     init: function () {
         document.getElementById('save-btn').addEventListener('click', function() {
