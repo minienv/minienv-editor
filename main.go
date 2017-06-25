@@ -11,10 +11,12 @@ import (
 	"strconv"
 )
 
+var allowOrigin string
+
 type FileMap struct {
-	FileName string `json:"fileName"`
-	FilePath string `json:"filePath"`
-	IsDir bool `json:"isDir"`
+	FileName string     `json:"fileName"`
+	FilePath string     `json:"filePath"`
+	IsDir    bool       `json:"isDir"`
 	Children []*FileMap `json:"children"`
 }
 
@@ -25,9 +27,9 @@ func getChildren(fullFilePath string, relativeFilePath string, fileMap *FileMap)
 		os.Exit(1)
 	}
 	for i := 0; i < len(files); i++ {
-		childFullFilePath := fmt.Sprintf("%s%s%s",fullFilePath, string(os.PathSeparator), files[i].Name())
-		childRelativeFilePath := fmt.Sprintf("%s%s%s",relativeFilePath, string(os.PathSeparator), files[i].Name())
-		childFileMap := &FileMap{FileName: files[i].Name(), FilePath: childRelativeFilePath, IsDir: files[i].IsDir(), Children:nil}
+		childFullFilePath := fmt.Sprintf("%s%s%s", fullFilePath, string(os.PathSeparator), files[i].Name())
+		childRelativeFilePath := fmt.Sprintf("%s%s%s", relativeFilePath, string(os.PathSeparator), files[i].Name())
+		childFileMap := &FileMap{FileName: files[i].Name(), FilePath: childRelativeFilePath, IsDir: files[i].IsDir(), Children: nil}
 		fileMap.Children = append(fileMap.Children, childFileMap)
 		if files[i].IsDir() {
 			getChildren(childFullFilePath, childRelativeFilePath, childFileMap)
@@ -137,11 +139,9 @@ func getBaseDir(r *http.Request, values url.Values) string {
 
 func addCorsAndCacheHeadersThenServe(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Set some header.
-		w.Header().Add("Access-Control-Allow-Origin", "*")
+		w.Header().Add("Access-Control-Allow-Origin", allowOrigin)
 		w.Header().Add("Cache-Control", "no-store, must-revalidate")
 		w.Header().Add("Expires", "0")
-		// Serve with the actual handler.
 		h.ServeHTTP(w, r)
 	}
 }
@@ -153,6 +153,7 @@ func main() {
 	if _, err := strconv.Atoi(os.Args[1]); err != nil {
 		log.Fatalf("Invalid port: %s (%s)\n", os.Args[1], err)
 	}
+	allowOrigin = os.Getenv("EXUP_ALLOW_ORIGIN")
 	staticFileHandler := http.FileServer(http.Dir("public"))
 	http.HandleFunc("/api/files", fileListHandler)
 	http.HandleFunc("/api/file", fileHandler)
