@@ -120,7 +120,7 @@ func fileListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getBaseDir(r *http.Request, values url.Values) string {
-	baseDir := os.Getenv("EXUP_DIR")
+	baseDir := os.Getenv("MINIENV_DIR")
 	srcDir := ""
 	srcDirs := values["src"]
 	if len(srcDirs) > 0 {
@@ -153,7 +153,7 @@ func main() {
 	if _, err := strconv.Atoi(os.Args[1]); err != nil {
 		log.Fatalf("Invalid port: %s (%s)\n", os.Args[1], err)
 	}
-	allowOrigin = os.Getenv("EXUP_ALLOW_ORIGIN")
+	allowOrigin = os.Getenv("MINIENV_ALLOW_ORIGIN")
 	staticFileHandler := http.FileServer(http.Dir("public"))
 	http.HandleFunc("/api/files", fileListHandler)
 	http.HandleFunc("/api/file", fileHandler)
