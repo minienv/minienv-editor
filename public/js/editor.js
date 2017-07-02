@@ -1,7 +1,7 @@
 var editor = undefined;
 require(['vs/editor/editor.main'], function() {
 	editor = monaco.editor.create(document.getElementById('editor'), {
-		theme: 'vs-dark',
+		theme: 'vs',
 		automaticLayout: true
 	});
 });

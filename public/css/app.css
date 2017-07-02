@@ -5,6 +5,10 @@ html, body {
 	overflow: hidden;
 }
 
+body {
+	font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, serif;
+}
+
 #app {
 	height: 100%;
 	width: 100%;
@@ -35,6 +39,7 @@ html, body {
 }
 
 .tree-file {
+	color: #1ac5b7;
 	font-weight: bold;
 	cursor: pointer;
 }
