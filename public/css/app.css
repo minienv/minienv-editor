@@ -15,7 +15,7 @@ body {
 }
 
 #tree-container {
-	width: 100%;
+	width: 280px;
 	height: 100%;
 	overflow-y: auto;
 	overflow-x: auto;
@@ -45,7 +45,7 @@ body {
 }
 
 #editor-container {
-	width: 100%;
+	width: calc(100% - 280px);
 	height: 100%;
 	float: left;
 }
