@@ -12,6 +12,7 @@ import (
 )
 
 var allowOrigin string
+var allowDockerComposeFile bool
 
 type FileMap struct {
 	FileName string     `json:"fileName"`
@@ -20,19 +21,22 @@ type FileMap struct {
 	Children []*FileMap `json:"children"`
 }
 
-func getChildren(fullFilePath string, relativeFilePath string, fileMap *FileMap) {
+func getChildren(fullFilePath string, relativeFilePath string, fileMap *FileMap, allowDockerCompose bool) {
 	files, err := ioutil.ReadDir(fullFilePath)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	for i := 0; i < len(files); i++ {
+		if ! allowDockerCompose && files[i].Name() == "docker-compose.yml" {
+			continue
+		}
 		childFullFilePath := fmt.Sprintf("%s%s%s", fullFilePath, string(os.PathSeparator), files[i].Name())
 		childRelativeFilePath := fmt.Sprintf("%s%s%s", relativeFilePath, string(os.PathSeparator), files[i].Name())
 		childFileMap := &FileMap{FileName: files[i].Name(), FilePath: childRelativeFilePath, IsDir: files[i].IsDir(), Children: nil}
 		fileMap.Children = append(fileMap.Children, childFileMap)
 		if files[i].IsDir() {
-			getChildren(childFullFilePath, childRelativeFilePath, childFileMap)
+			getChildren(childFullFilePath, childRelativeFilePath, childFileMap, true)
 		}
 	}
 }
@@ -62,7 +66,7 @@ func fileHandlerPut(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	baseDir := getBaseDir(r, values)
+	baseDir := getBaseDir()
 	filePath := values.Get("fp")
 	if len(filePath) > 0 && filePath[0:1] == string(os.PathSeparator) {
 		filePath = filePath[1:]
@@ -87,7 +91,7 @@ func fileHandlerPut(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileHandlerGet(w http.ResponseWriter, r *http.Request) {
-	baseDir := getBaseDir(r, r.URL.Query())
+	baseDir := getBaseDir()
 	filePath := r.URL.Query()["fp"][0]
 	if len(filePath) > 0 && filePath[0:1] == string(os.PathSeparator) {
 		filePath = filePath[1:]
@@ -104,11 +108,11 @@ func fileHandlerGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileListHandler(w http.ResponseWriter, r *http.Request) {
-	baseDir := getBaseDir(r, r.URL.Query())
-	log.Printf("BASE DIR IS %s", baseDir)
+	baseDir := getBaseDir()
+	log.Printf("BaseDir = %s", baseDir)
 	relativeDir := string(os.PathSeparator)
 	fileMap := &FileMap{FileName: relativeDir, FilePath: relativeDir, IsDir: true, Children: nil}
-	getChildren(baseDir, relativeDir, fileMap)
+	getChildren(baseDir, relativeDir, fileMap, allowDockerComposeFile)
 	_, err := json.Marshal(fileMap)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
@@ -119,13 +123,9 @@ func fileListHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(fileMap)
 }
 
-func getBaseDir(r *http.Request, values url.Values) string {
+func getBaseDir() string {
 	baseDir := os.Getenv("MINIENV_DIR")
-	srcDir := ""
-	srcDirs := values["src"]
-	if len(srcDirs) > 0 {
-		srcDir = string(srcDirs[0])
-	}
+	srcDir := os.Getenv("MINIENV_SRC_DIR")
 	if len(srcDir) > 1 {
 		if srcDir[0:1] == string(os.PathSeparator) {
 			baseDir += srcDir
@@ -154,6 +154,7 @@ func main() {
 		log.Fatalf("Invalid port: %s (%s)\n", os.Args[1], err)
 	}
 	allowOrigin = os.Getenv("MINIENV_ALLOW_ORIGIN")
+	allowDockerComposeFile = os.Getenv("MINIENV_PLATFORM") == ""
 	staticFileHandler := http.FileServer(http.Dir("public"))
 	http.HandleFunc("/api/files", fileListHandler)
 	http.HandleFunc("/api/file", fileHandler)
